@@ -244,6 +244,13 @@ scAge 数据）缺文件时跳过，CellOracle 需在 Docker 里手动测。用�
 - `obs`：`sample`、`data/sample_info.csv` 里的样本元数据（`condition` 等，01 读入时合并）、QC 指标、`leiden`、`cell_type`；`obsm`：`X_pca`、`X_umap`（整合后还有 `X_pca_harmony` / `X_scVI`）
 - scale 只在 02 里对高变基因的临时副本做，用于 PCA，不保存
 
+**不使用 adata.raw，也不按 HVG 切基因**（和 scanpy 官方教程不同）：
+- HVG 只是 `var['highly_variable']` 里的标记；PCA 在只含 HVG 的临时副本上做，
+  只把 `obsm['X_pca']`（和 `uns['pca']`）放回。PCA 结果是 细胞 × 主成分，
+  所以能放回全基因的 adata；基因载荷（基因 × 主成分）留在副本里，不放回。
+- 因此 `adata.X` 始终是全部基因的 log1p，看任何基因都直接用 adata，不需要 raw。
+- 原始 counts 固定放在 `layers['counts']`，不靠 raw 保存。
+
 | 需要的输入 | 工具 |
 |---|---|
 | 原始 counts | scVI（layer="counts"）、HVG seurat_v3、Scrublet、Hotspot、scDRS、metacells、CellOracle（layers["raw_count"]）、pySCENIC（08a 导出 counts） |
@@ -273,6 +280,12 @@ scAge 数据）缺文件时跳过，CellOracle 需在 Docker 里手动测。用�
 - 课程原代码的笔误已修正：`adjancencies`、`op_3_genes`、`scanpy.externalas`；
   过时 API 已替换：`AnnData.concatenate` → `ad.concat`，`rename_categories` → `map` 对照表。
 - 逐细胞做条件间差异/富集会把细胞当作重复，p 值偏小；多个样本时考虑 pseudobulk，回复中提醒用户。
+- 从官方教程或其他课程复制代码时，删掉 `adata.raw = adata` 和
+  `adata = adata[:, adata.var.highly_variable]`，否则会丢基因、破坏数据约定；
+  作图参数 `use_raw=True` 在本模板数据上会报错（没有 raw），改为去掉或 `use_raw=False`。
+  用户自己的数据如果已经是这种格式（`adata.n_vars` 只有约 2000、`adata.raw` 不为空），
+  全部基因在 `adata.raw` 里，raw 里是 counts 还是 log1p 要先检查（看有没有小数）。
+- 细胞数很多（几十万）时内存可能不够：`layers['log1p']` 和 X 内容相同，可以删掉省内存。
 
 ## 文件结构 / Files
 
