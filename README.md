@@ -25,8 +25,8 @@
 一套从数据读取到基因调控网络的 **Python 单细胞转录组分析模板**，共 25 个步骤，同时也是一个 **Claude skill**（`SKILL.md`）。
 
 - **每一步一个模板**：`.py` 给 Spyder 用，`.ipynb` 给 Jupyter 用，两种内容完全相同。
-- **每个模板开头都写清楚**：这份代码做什么、在流程中的位置、用哪个 conda 环境、输入数据、输出结果、怎么解读结果、注意事项。
-- **每个代码块开头三行注释**：步骤、输入、输出。参数全部集中在脚本顶部，用大写变量名。
+- **每个模板开头都写清楚**（英文）：这份代码做什么、在流程中的位置、用哪个 conda 环境、输入数据、输出结果、怎么解读结果、注意事项。
+- **每个代码块开头三行注释**：`# Step:`、`# Input:`、`# Output:`（模板内注释均为英文）。参数全部集中在脚本顶部，用大写变量名。
 - **按工具拆分 conda 环境（共 12 个）**：避免不同工具互相要求不同版本的包，每个环境都有 `envs/*.yml`，一条命令就能装好。
 - **输出按 FAIR 原则组织**：每个步骤一个结果文件夹，图、表、对象、日志分开存放，文件名带步骤号；自动记录参数和全部包版本，并生成 README。
 - **作为 Claude skill 使用时**：Claude 会先提示这一步需要哪个环境、要装哪些包，检查输入数据状态，再基于模板改参数。
@@ -73,7 +73,7 @@ R 里的 Seurat 从 v4 升级到 v5 后，对象结构变了（Assay5、layers�
 
 ### 每一步详解
 
-点开每一步，可以看到这份代码做什么、输入、输出、怎么解读，内容与模板文件开头的说明一致。
+点开每一步，可以看到这份代码做什么、输入、输出、怎么解读。模板文件开头是对应的英文说明。
 
 <details>
 <summary><b>01 读取单细胞数据并合并样本</b></summary>
@@ -1074,7 +1074,7 @@ pysc/
 ├── envs/              12 个 conda 环境文件（*.yml）
 ├── templates/         00_check_env.py（环境检查）、fair_utils.py（输出辅助）、01–25 步骤模板（.py）
 ├── notebooks/         01–25 步骤模板的 Jupyter 版本（.ipynb，kernel 已预设为对应环境名）
-└── tests/             make_test_data.py（生成测试数据）、run_all_tests.py（批量测试）、双击运行测试.command（Mac）
+└── tests/             make_test_data.py（生成测试数据）、run_all_tests.py（批量测试）、run_tests.command（Mac）
 ```
 
 ### 快速开始
@@ -1210,7 +1210,7 @@ cd tests
 python run_all_tests.py           # 全部步骤
 python run_all_tests.py 05 07     # 只测某几步
 ```
-Mac 上也可以直接双击 `tests/双击运行测试.command`。需要外部大数据的步骤（cisTarget 数据库、loom、VDJ、Multiome、GTF、scAge 数据）缺文件时会自动跳过；CellOracle 需要在 Docker 里手动测。
+Mac 上也可以直接双击 `tests/run_tests.command`。需要外部大数据的步骤（cisTarget 数据库、loom、VDJ、Multiome、GTF、scAge 数据）缺文件时会自动跳过；CellOracle 需要在 Docker 里手动测。
 
 ### 已知问题
 
@@ -1278,7 +1278,7 @@ This project uses the scanpy / AnnData ecosystem instead, covering QC, integrati
 | 24 | `24_grn_celloracle` | Docker | Cluster-specific GRNs (CellOracle) |
 | 25 | `25_methylation_scage` | sc-core | Epigenetic age from single-cell methylation (scAge; not RNA-seq) |
 
-Each template opens with a detailed header (what it does, inputs, outputs, how to read the results). The same notes are collected, in Chinese, under [每一步详解](#每一步详解) above.
+Each template opens with a detailed header (what it does, inputs, outputs, how to read the results). A Chinese version of these notes is collected under [每一步详解](#每一步详解) above.
 
 ### Repository layout
 
@@ -1289,7 +1289,7 @@ pysc/
 ├── envs/              12 conda environment files (*.yml)
 ├── templates/         00_check_env.py, fair_utils.py (output helpers), step templates 01–25 (.py)
 ├── notebooks/         Jupyter versions of steps 01–25 (.ipynb, kernel preset to the env name)
-└── tests/             make_test_data.py, run_all_tests.py, 双击运行测试.command (macOS double-click runner)
+└── tests/             make_test_data.py, run_all_tests.py, run_tests.command (macOS double-click runner)
 ```
 
 ### Quick start
@@ -1425,7 +1425,7 @@ cd tests
 python run_all_tests.py           # all steps
 python run_all_tests.py 05 07     # selected steps
 ```
-On macOS you can also double-click `tests/双击运行测试.command`. Steps that need large external data (cisTarget databases, loom, VDJ, Multiome, GTF, scAge data) are skipped when those files are missing. CellOracle has to be tested by hand inside Docker.
+On macOS you can also double-click `tests/run_tests.command`. Steps that need large external data (cisTarget databases, loom, VDJ, Multiome, GTF, scAge data) are skipped when those files are missing. CellOracle has to be tested by hand inside Docker.
 
 ### Known issues
 

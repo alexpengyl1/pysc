@@ -1,30 +1,30 @@
 #!/bin/zsh -i
-# 双击即可运行全部模板测试。结果：tests/test_report.md、tests/test_console.log
+# Double-click to run all template tests. Results: tests/test_report.md, tests/test_console.log
 cd "$(dirname "$0")"
 
-# 步骤：找到 conda（终端里已能用 conda 时跳过）
+# Step: find conda (skipped when conda already works in the terminal)
 if ! command -v conda >/dev/null 2>&1; then
   for d in ~/miniconda3 ~/anaconda3 ~/miniforge3 ~/mambaforge /opt/miniconda3 /opt/anaconda3 /opt/homebrew/Caskroom/miniforge/base; do
     [ -f "$d/etc/profile.d/conda.sh" ] && source "$d/etc/profile.d/conda.sh" && break
   done
 fi
-command -v conda >/dev/null 2>&1 || { echo "找不到 conda，请告诉 Claude 你的 conda 装在哪里"; read; exit 1; }
+command -v conda >/dev/null 2>&1 || { echo "conda not found; tell Claude where conda is installed"; read; exit 1; }
 
-# 步骤：把已建好的环境注册成同名 kernel（没建的环境会列出来，对应步骤会报“缺 kernel”）
+# Step: register existing environments as Jupyter kernels of the same name (missing environments are listed; their steps will report a missing kernel)
 for env in sc-core sc-scvi sc-sccoda gseapy pyscenic cpdb liana sc-palantir sc-velo sc-multi sc-metacell; do
   if conda env list | grep -q "^$env "; then
     conda run -n "$env" python -m ipykernel install --user --name "$env" --display-name "$env" >/dev/null 2>&1 \
-      && echo "kernel 已注册：$env" || echo "注册失败（环境里可能没装 ipykernel）：$env"
+      && echo "kernel registered: $env" || echo "registration failed (ipykernel may be missing): $env"
   else
-    echo "环境不存在：$env"
+    echo "environment not found: $env"
   fi
 done
 
-# 步骤：在 base 环境里装测试工具并运行全部测试
+# Step: install the test tools in base and run all tests
 conda activate base
 python -m pip install -q nbclient nbformat ipykernel
 python run_all_tests.py 2>&1 | tee test_console.log
 
 echo ""
-echo "测试结束，可以关掉这个窗口，回到 Claude 说一声“跑完了”。"
+echo "Tests finished. You can close this window and tell Claude they are done."
 read

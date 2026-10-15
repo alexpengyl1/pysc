@@ -6,7 +6,8 @@ description: Python/scanpy single-cell RNA-seq analysis (QC, integration, annota
 # Python 单细胞转录组分析 / Python single-cell RNA-seq
 
 模板来源：根据 Python 单细胞课程（ps2–ps30）提供的代码整理，已改成参数在顶部、按步骤拆分的脚本。
-代码风格遵守 readable-coding skill：每块开头三行注释（步骤 / 输入 / 输出），一块只做一件事。
+代码风格遵守 readable-coding skill：每块开头三行注释（`# Step:` / `# Input:` / `# Output:`），一块只做一件事。
+模板里的注释、打印信息和文件开头说明都是英文；新增或修改代码时注释也用英文，和模板保持一致。
 所有输出按 FAIR 原则组织（见「输出规范」）：每个步骤一个文件夹，图/表/对象/日志分开，文件名带步骤号，
 自动记录参数和软件版本。
 
@@ -24,7 +25,7 @@ description: Python/scanpy single-cell RNA-seq analysis (QC, integration, annota
    模板有两种格式，内容完全相同：`notebooks/*.ipynb`（Jupyter，用户默认用这个）和 `templates/*.py`（Spyder，`# %%` 分块）。
    notebook 已预设 kernel 名 = 环境名，打开后确认右上角 kernel 是对应环境。
 5. 新增图或表时，按「输出规范」命名并保存，不要用 plt.show() 了事或把文件写到别处。
-6. 结果解读看模板文件开头的「解读」段落；运行后每个步骤文件夹里的 README.md 列出了参数和全部输出。
+6. 结果解读看模板文件开头的 `[How to read the results]` 段落；运行后每个步骤文件夹里的 README.md 列出了参数和全部输出。
 
 ## 输出规范（FAIR）/ Output convention
 
@@ -212,7 +213,7 @@ CellOracle 的 notebook 在 Docker 容器的 Jupyter 里打开，提示找不到
 ## 测试模板 / Testing
 
 改了模板或新建/升级了环境后，在装 Jupyter 的环境里运行 `python tests/run_all_tests.py`（只测某几步：加步骤号，如 `05 07`），
-Mac 上也可以双击 `tests/双击运行测试.command`（自动注册 kernel、装 nbclient、跑全部测试）。
+Mac 上也可以双击 `tests/run_tests.command`（自动注册 kernel、装 nbclient、跑全部测试）。
 它用 PBMC 3k 生成 4 个样本的测试数据（ctrl/stim 各 2 个，stim 里人为上调干扰素基因），按各 notebook 的 kernel 依次执行，
 结果写入 `tests/test_report.md`（通过 / 失败 / 跳过 / 阻塞 + 报错）。需要外部大数据的步骤（cisTarget、loom、VDJ、multiome、GTF、
 scAge 数据）缺文件时跳过，CellOracle 需在 Docker 里手动测。用户请你修 bug 时，先读 test_report.md 和 tests/test_project/executed/ 里出错的 notebook。
@@ -307,16 +308,16 @@ pysc/
 找不到 `templates/fair_utils.py` 时，用下面的内容在项目文件夹里创建它：
 
 ```python
-# FAIR 输出辅助模块：所有模板共用，放在和模板脚本同一个文件夹里
-# 约定（每个步骤一个文件夹）：
-#   results/<步骤>/figures/  图，PDF（矢量，投稿用）+ PNG（300 dpi，预览用）
-#   results/<步骤>/tables/   表，CSV
-#   results/<步骤>/objects/  数据对象，h5ad / h5mu / pickle
-#   results/<步骤>/logs/     run_info.json（时间、环境、参数）、pip_freeze.txt（全部包版本）
-#                            一个步骤分几个脚本时按脚本分开：run_info_08a.json、pip_freeze_08b.txt
-#   results/<步骤>/README.md 自动生成：参数 + 输出文件清单
-# 文件名：<步骤号>_<内容>_<分组或基因>.<扩展名>，只用小写英文、数字和下划线
-# 兼容 Python 3.7（pyscenic 环境）
+# FAIR output helpers shared by all templates; keep this file in the same folder as the template scripts
+# Convention (one folder per step):
+#   results/<step>/figures/  figures, PDF (vector, for papers) + PNG (300 dpi, for preview)
+#   results/<step>/tables/   tables, CSV
+#   results/<step>/objects/  data objects, h5ad / h5mu / pickle
+#   results/<step>/logs/     run_info.json (time, environment, parameters), pip_freeze.txt (all package versions)
+#                            a step split into several scripts keeps separate logs: run_info_08a.json, pip_freeze_08b.txt
+#   results/<step>/README.md written automatically: parameters + list of output files
+# File names: <step number>_<content>_<group or gene>.<extension>, lowercase letters, digits and underscores only
+# Compatible with Python 3.7 (pyscenic environment)
 
 import datetime
 import json
@@ -333,7 +334,7 @@ SUBDIRS = ("figures", "tables", "objects", "logs")
 
 
 def setup_step(step):
-    """建好 results/<step>/ 下的四个子文件夹，返回路径字典。"""
+    """Create the four subfolders under results/<step>/ and return a dict of paths."""
     step_dir = RESULTS_DIR / step
     dirs = {"step": step, "root": step_dir}
     for name in SUBDIRS:
@@ -343,14 +344,14 @@ def setup_step(step):
 
 
 def out(dirs, kind, filename):
-    """输出文件路径：results/<step>/<kind>/<步骤号>_<filename>。"""
+    """Output path: results/<step>/<kind>/<step number>_<filename>."""
     prefix = dirs["step"].split("_")[0]
     return dirs[kind] / f"{prefix}_{filename}"
 
 
 def save_fig(dirs, name, fig=None):
-    """保存当前图（或传入的图）为 PDF + PNG，然后显示并关闭。
-    支持 matplotlib Figure、seaborn ClusterGrid、plotnine ggplot。"""
+    """Save the current figure (or the one passed in) as PDF + PNG, then show and close it.
+    Supports matplotlib Figure, seaborn ClusterGrid and plotnine ggplot."""
     if fig is None:
         fig = plt.gcf()
     pdf = out(dirs, "figures", f"{name}.pdf")
@@ -366,8 +367,8 @@ def save_fig(dirs, name, fig=None):
 
 
 def write_run_info(dirs, params, script=None):
-    """记录运行信息和全部包版本，并生成该步骤的 README.md。
-    一个步骤分几个脚本（如 08a/08b/08c）时传 script，日志按脚本分开保存。"""
+    """Record run information and all package versions, and write this step's README.md.
+    When a step is split into several scripts (e.g. 08a/08b/08c), pass script so logs are kept separately."""
     suffix = f"_{script}" if script else ""
     info = {
         "step": dirs["step"],
@@ -385,13 +386,13 @@ def write_run_info(dirs, params, script=None):
     (dirs["logs"] / f"pip_freeze{suffix}.txt").write_text(freeze.stdout)
 
     lines = [f"# {dirs['step']}", "",
-             f"- 运行时间：{info['time']}",
-             f"- conda 环境：{info['conda_env']}（Python {info['python']}）",
-             f"- 完整包版本：logs/pip_freeze{suffix}.txt", "", f"## 参数（{info['script']}）", ""]
+             f"- Run time: {info['time']}",
+             f"- Conda environment: {info['conda_env']} (Python {info['python']})",
+             f"- Full package versions: logs/pip_freeze{suffix}.txt", "", f"## Parameters ({info['script']})", ""]
     lines += [f"- `{key}` = {value}" for key, value in params.items()]
     for kind in ("figures", "tables", "objects", "logs"):
         files = sorted(p.name for p in dirs[kind].iterdir() if p.is_file())
         lines += ["", f"## {kind}", ""] + [f"- {kind}/{name}" for name in files]
     (dirs["root"] / "README.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
-    print("已写入", dirs["root"] / "README.md")
+    print("Written:", dirs["root"] / "README.md")
 ```

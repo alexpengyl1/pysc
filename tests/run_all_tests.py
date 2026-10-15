@@ -1,18 +1,18 @@
-# 一键测试所有 notebook 模板：在各自的 conda kernel 里，用小测试数据从头跑一遍，生成测试报告
+# Test every notebook template in one go: run each from scratch on small test data in its own conda kernel and write a test report
 #
-# 用法（Mac 终端，在装了 Jupyter 的环境里，一般是 base）：
+# Usage (Mac terminal, in the environment where Jupyter is installed, usually base):
 #   conda activate base
-#   pip install nbclient nbformat          # 第一次需要
-#   cd "<pysc 文件夹>/tests"
-#   python run_all_tests.py                # 全部步骤
-#   python run_all_tests.py 05 07 09       # 只测指定步骤（它依赖的上游结果要已经存在，比如修完 bug 后重测）
+#   pip install nbclient nbformat          # first time only
+#   cd "<pysc folder>/tests"
+#   python run_all_tests.py                # all steps
+#   python run_all_tests.py 05 07 09       # selected steps only (their upstream results must already exist, e.g. retesting after a bug fix)
 #
-# 前提：每个环境已注册成同名 Jupyter kernel（见 SKILL.md「在 Jupyter 里使用」）
-# 输出（都在 tests/ 里）：
-#   test_project/            测试项目：data/（测试数据）、results/（各步骤 FAIR 输出）、executed/（跑完的 notebook）
-#   test_report.md           每一步 通过 / 失败 / 跳过 / 阻塞，用时，失败的报错和出错的步骤
-#   test_report.json         同上，机器可读
-# 需要联网：下载 PBMC 3k、CellTypist 模型、Enrichr 基因集、CellPhoneDB 数据库
+# Requirement: each environment registered as a Jupyter kernel of the same name (see "Using Jupyter" in SKILL.md)
+# Output (all in tests/):
+#   test_project/            test project: data/ (test data), results/ (FAIR outputs of each step), executed/ (executed notebooks)
+#   test_report.md           pass / fail / skip / blocked for each step, run time, error and failing step for failures
+#   test_report.json         same, machine-readable
+# Needs internet: downloads PBMC 3k, CellTypist models, Enrichr gene sets, the CellPhoneDB database
 
 import datetime
 import json
@@ -31,9 +31,9 @@ from nbclient.exceptions import CellExecutionError
 TESTS_DIR = Path(__file__).resolve().parent
 SKILL_DIR = TESTS_DIR.parent
 PROJECT = TESTS_DIR / "test_project"
-CELL_TIMEOUT = 3600          # 单个 cell 最长运行秒数
+CELL_TIMEOUT = 3600          # maximum run time of a single cell in seconds
 
-# 测试顺序、上游依赖、跳过条件（缺哪个外部文件就跳过）
+# Test order, upstream dependencies and skip conditions (skipped when an external file is missing)
 STEPS = [
     ("make_test_data", [], None),
     ("01_read_data", ["make_test_data"], None),
@@ -65,7 +65,7 @@ STEPS = [
     ("25_methylation_scage", [], "data/scage/sc_data_raw/*"),
 ]
 
-# 测试时替换的参数（整行或整个多行字典/列表）和代码片段
+# Parameters replaced for testing (a whole line or a whole multi-line dict/list) and code snippets
 FIRST_TYPE = 'sc.read_h5ad(IN_FILE).obs.query("cell_type == \'{}\'").index[0]'
 PARAMS = {
     "01_read_data": {"SAMPLES": '{s: RAW_DIR / s for s in ["S1", "S2", "S3", "S4"]}'},
@@ -90,14 +90,14 @@ PARAMS = {
 CODE = {
     "04_integrate_scvi": [("model.train()", "model.train(max_epochs=20)")],
     "05_annotate": [('adata.obs["cell_type"] = adata.obs[CLUSTER_KEY].map(annotation).astype("category")',
-                     'test_types = pd.read_csv("data/test_cell_types.csv", index_col="barcode")["cell_type"]  # 测试用\n'
+                     'test_types = pd.read_csv("data/test_cell_types.csv", index_col="barcode")["cell_type"]  # for testing\n'
                      'adata.obs["cell_type"] = test_types.reindex(adata.obs_names.str.rsplit("-", n=1).str[0]).values\n'
                      'adata.obs["cell_type"] = adata.obs["cell_type"].astype("category")')],
 }
 
 
 def set_param(source, name, value):
-    """把 `NAME = ...`（可跨多行的字典/列表）整体替换成 `NAME = value`。"""
+    """Replace `NAME = ...` (including a multi-line dict/list) with `NAME = value`."""
     lines = source.split("\n")
     for i, line in enumerate(lines):
         if re.match(rf"^{re.escape(name)}\s*=", line):
@@ -105,13 +105,13 @@ def set_param(source, name, value):
             if line.split("#")[0].rstrip().endswith(("{", "[", "(")):
                 while not lines[end].strip().startswith(("}", "]", ")")):
                     end += 1
-            lines[i:end + 1] = [f"{name} = {value}   # 测试替换"]
+            lines[i:end + 1] = [f"{name} = {value}   # replaced for testing"]
             return "\n".join(lines), True
     return source, False
 
 
 def make_test_data_notebook():
-    """把 make_test_data.py 包成 notebook，在 sc-core kernel 里执行。"""
+    """Wrap make_test_data.py as a notebook and run it in the sc-core kernel."""
     source = (TESTS_DIR / "make_test_data.py").read_text(encoding="utf-8")
     cells = [nbformat.v4.new_code_cell(c.strip()) for c in re.split(r"^# %%[^\n]*\n", source, flags=re.M) if c.strip()]
     nb = nbformat.v4.new_notebook(cells=cells)
@@ -120,7 +120,7 @@ def make_test_data_notebook():
 
 
 def prepare(step):
-    """读取 notebook，套用测试参数和代码替换，返回 (notebook, 未找到的替换)。"""
+    """Read a notebook, apply test parameters and code replacements, return (notebook, replacements not found)."""
     if step == "make_test_data":
         return make_test_data_notebook(), []
     nb = nbformat.read(SKILL_DIR / "notebooks" / f"{step}.ipynb", as_version=4)
@@ -131,21 +131,21 @@ def prepare(step):
             if cell.cell_type == "code" and not done:
                 cell.source, done = set_param(cell.source, name, value)
         if not done:
-            missing.append(f"参数 {name}")
+            missing.append(f"parameter {name}")
     for old, new in CODE.get(step, []):
         hits = [c for c in nb.cells if c.cell_type == "code" and old in c.source]
         for cell in hits:
             cell.source = cell.source.replace(old, new)
         if not hits:
-            missing.append(f"代码 {old[:40]}")
+            missing.append(f"code {old[:40]}")
     return nb, missing
 
 
 def failing_step_title(nb):
-    """找出报错的 cell 里的“# 步骤：”说明。"""
+    """Find the '# Step:' description of the cell that failed."""
     for cell in nb.cells:
         if cell.cell_type == "code" and any(o.get("output_type") == "error" for o in cell.get("outputs", [])):
-            match = re.search(r"^# 步骤：(.+)$", cell.source, flags=re.M)
+            match = re.search(r"^# Step: (.+)$", cell.source, flags=re.M)
             return match.group(1) if match else cell.source.splitlines()[0]
     return ""
 
@@ -155,7 +155,7 @@ def run_step(step, kernels):
     kernel = nb.metadata["kernelspec"]["name"]
     if kernel not in kernels:
         return {"status": "FAIL", "kernel": kernel, "seconds": 0,
-                "error": f"没有名为 {kernel} 的 Jupyter kernel。先 conda activate {kernel}，再运行 "
+                "error": f"No Jupyter kernel named {kernel}. Run conda activate {kernel}, then "
                          f"python -m ipykernel install --user --name {kernel} --display-name {kernel}"}
     start = time.time()
     client = NotebookClient(nb, timeout=CELL_TIMEOUT, kernel_name=kernel, resources={"metadata": {"path": str(PROJECT)}})
@@ -164,7 +164,7 @@ def run_step(step, kernels):
         client.execute()
         result["status"] = "PASS"
     except CellExecutionError as error:
-        message = re.sub(r"\x1b\[[0-9;]*m", "", str(error))      # 去掉终端颜色码
+        message = re.sub(r"\x1b\[[0-9;]*m", "", str(error))      # strip terminal colour codes
         result.update(status="FAIL", failed_at=failing_step_title(nb),
                       error="\n".join(message.strip().splitlines()[-12:]))
     except Exception:
@@ -175,9 +175,9 @@ def run_step(step, kernels):
 
 
 def write_report(results):
-    icons = {"PASS": "✅ 通过", "FAIL": "❌ 失败", "SKIP": "⏭ 跳过", "BLOCKED": "⛔ 阻塞"}
-    lines = ["# 模板测试报告", "", f"- 时间：{datetime.datetime.now():%Y-%m-%d %H:%M}",
-             f"- 测试项目：{PROJECT}", "", "| 步骤 | kernel | 结果 | 用时(秒) | 说明 |", "|---|---|---|---|---|"]
+    icons = {"PASS": "✅ pass", "FAIL": "❌ fail", "SKIP": "⏭ skip", "BLOCKED": "⛔ blocked"}
+    lines = ["# Template test report", "", f"- Time: {datetime.datetime.now():%Y-%m-%d %H:%M}",
+             f"- Test project: {PROJECT}", "", "| Step | kernel | Result | Time (s) | Notes |", "|---|---|---|---|---|"]
     for step, r in results.items():
         note = r.get("failed_at") or r.get("reason") or ""
         lines.append(f"| {step} | {r.get('kernel', '')} | {icons[r['status']]} | {r.get('seconds', '')} | {note} |")
@@ -185,14 +185,14 @@ def write_report(results):
         if r["status"] == "FAIL" or r.get("not_applied"):
             lines += ["", f"## {step}", ""]
             if r.get("not_applied"):
-                lines.append(f"测试替换没有找到：{r['not_applied']}")
+                lines.append(f"Test replacements not found: {r['not_applied']}")
             if r.get("error"):
                 lines += ["```", r["error"], "```"]
     (TESTS_DIR / "test_report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     (TESTS_DIR / "test_report.json").write_text(json.dumps(results, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
-# 主流程：准备测试项目文件夹，按顺序跑，每跑完一步就更新报告
+# Main: prepare the test project folder, run steps in order, update the report after each step
 (PROJECT / "executed").mkdir(parents=True, exist_ok=True)
 shutil.copy(SKILL_DIR / "templates" / "fair_utils.py", PROJECT / "fair_utils.py")
 kernels = KernelSpecManager().find_kernel_specs()
@@ -205,15 +205,15 @@ for step, deps, needs in STEPS:
         continue
     blocked = [d for d in deps if results.get(d, {}).get("status") in ("FAIL", "BLOCKED", "SKIP")]
     if needs == "DOCKER":
-        results[step] = {"status": "SKIP", "reason": "需要在 CellOracle Docker 容器里手动运行"}
+        results[step] = {"status": "SKIP", "reason": "run by hand inside the CellOracle Docker container"}
     elif needs and not list(PROJECT.glob(needs)):
-        results[step] = {"status": "SKIP", "reason": f"缺少外部数据 {needs}"}
+        results[step] = {"status": "SKIP", "reason": f"missing external data {needs}"}
     elif blocked:
-        results[step] = {"status": "BLOCKED", "reason": f"上游 {', '.join(blocked)} 未通过"}
+        results[step] = {"status": "BLOCKED", "reason": f"upstream {', '.join(blocked)} did not pass"}
     else:
-        print(f"运行 {step} ...", flush=True)
+        print(f"Running {step} ...", flush=True)
         results[step] = run_step(step, kernels)
     print(f"  {step}: {results[step]['status']}", flush=True)
     write_report(results)
 
-print("报告：", TESTS_DIR / "test_report.md")
+print("Report:", TESTS_DIR / "test_report.md")

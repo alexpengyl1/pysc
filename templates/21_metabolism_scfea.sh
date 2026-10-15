@@ -1,23 +1,23 @@
-# 21 scFEA：从基因表达推断每个细胞的代谢通量
+# 21 scFEA: infer metabolic flux in each cell from gene expression
 #
-# 【这份代码做什么】
-#   scFEA 用图神经网络，根据代谢相关基因的表达估计每个细胞中各代谢模块（如糖酵解、TCA 循环）的通量，
-#   以及各代谢物的积累或消耗。这是一个命令行脚本，调用 scFEA 源码运行。
-# 【在流程中的位置】上游 21a_export_for_scfea.py → 本步（终点分析）
-# 【运行环境】先在 sc-core 里运行 21a；再在 scFEA 环境里，从项目根目录运行本脚本：
-#   conda activate scFEA && bash 21_metabolism_scfea.sh（课程 ps27）
-#   准备：git clone https://github.com/changwn/scFEA，把路径填到 SCFEA_DIR
-# 【输入数据】
-#   - results/21_scfea/objects/21_expr.csv（基因 x 细胞，log 标准化表达，21a 导出）
-#   - scFEA 自带的模块基因表和化学计量矩阵（人：module_gene_m168.csv + cmMat_c70_m168.csv；小鼠用 scFEA/data/ 里带 mouse 的对应文件）
-# 【输出结果】都在 results/21_scfea/
-#   - tables/：通量矩阵（细胞 x 代谢模块）和平衡矩阵（细胞 x 代谢物），csv
-#   - logs/：run_info_21.txt（时间、参数、命令）、pip_freeze_21.txt
-# 【怎么解读】
-#   - 通量矩阵可以当成新的特征矩阵：结合 tables/21_cell_info.csv 按细胞类型比较糖酵解、TCA 等模块的通量
-#   - 平衡矩阵反映代谢物的积累（正）或消耗（负）压力
-# 【注意】
-#   - 每次运行都要训练模型，细胞多时很慢
+# [Purpose]
+#   scFEA uses a graph neural network to estimate, from the expression of metabolic genes, the flux of each metabolic module (e.g. glycolysis, TCA cycle) in each cell,
+#   and the accumulation or consumption of each metabolite. This shell script calls the scFEA source code.
+# [Pipeline position] Upstream 21a_export_for_scfea.py -> this step (end point)
+# [Environment] Run 21a in sc-core first; then, in the scFEA environment, run this script from the project root:
+#   conda activate scFEA && bash 21_metabolism_scfea.sh (course ps27)
+#   Setup: git clone https://github.com/changwn/scFEA and put the path in SCFEA_DIR
+# [Input]
+#   - results/21_scfea/objects/21_expr.csv (genes x cells, log-normalised, exported by 21a)
+#   - scFEA's module gene table and stoichiometry matrix (human: module_gene_m168.csv + cmMat_c70_m168.csv; mouse: the corresponding files with mouse in scFEA/data/)
+# [Output] All in results/21_scfea/
+#   - tables/: flux matrix (cells x metabolic modules) and balance matrix (cells x metabolites), csv
+#   - logs/: run_info_21.txt (time, parameters, command), pip_freeze_21.txt
+# [How to read the results]
+#   - The flux matrix can be used as a new feature matrix: with tables/21_cell_info.csv, compare glycolysis, TCA and other module fluxes between cell types
+#   - The balance matrix reflects accumulation (positive) or consumption (negative) pressure on each metabolite
+# [Notes]
+#   - scFEA trains a model on every run, so many cells make it slow
 
 set -e
 SCFEA_DIR="$HOME/software/scFEA"
@@ -26,18 +26,18 @@ MODULE_FILE="module_gene_m168.csv"
 STOICHIOMETRY_FILE="cmMat_c70_m168.csv"
 IMPUTATION="True"
 
-# 步骤：记录运行时间、参数和包版本
-# 输入：上面的变量
-# 输出：logs/run_info_21.txt、logs/pip_freeze_21.txt
+# Step: record run time, parameters and package versions
+# Input: the variables above
+# Output: logs/run_info_21.txt, logs/pip_freeze_21.txt
 mkdir -p "$STEP_DIR/tables" "$STEP_DIR/logs"
 echo "time: $(date '+%Y-%m-%dT%H:%M:%S')" > "$STEP_DIR/logs/run_info_21.txt"
 echo "conda_env: $CONDA_DEFAULT_ENV" >> "$STEP_DIR/logs/run_info_21.txt"
 echo "MODULE_FILE=$MODULE_FILE STOICHIOMETRY_FILE=$STOICHIOMETRY_FILE IMPUTATION=$IMPUTATION" >> "$STEP_DIR/logs/run_info_21.txt"
 python -m pip freeze > "$STEP_DIR/logs/pip_freeze_21.txt"
 
-# 步骤：运行 scFEA（10x 数据建议插补）
-# 输入：objects/21_expr.csv、模块基因表、化学计量矩阵
-# 输出：tables/ 下的通量和平衡矩阵 csv
+# Step: run scFEA (imputation recommended for 10x data)
+# Input: objects/21_expr.csv, module gene table, stoichiometry matrix
+# Output: flux and balance matrices (csv) in tables/
 cd "$SCFEA_DIR"
 python src/scFEA.py \
     --data_dir data \
@@ -48,7 +48,7 @@ python src/scFEA.py \
     --res_dir "$STEP_DIR/tables" \
     --sc_imputation "$IMPUTATION"
 
-# 步骤：查看输出文件
-# 输入：tables/
-# 输出：打印的文件列表
+# Step: list the output files
+# Input: tables/
+# Output: printed file list
 ls -lh "$STEP_DIR/tables"
