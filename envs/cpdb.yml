@@ -1,0 +1,14 @@
+# CellPhoneDB v5 细胞通讯 + ktplotspy 作图
+# 对应课程：cpdb（ps14）
+name: cpdb
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10.14
+  - spyder-kernels=2.5
+  - spyder-notebook
+  - ipykernel
+  - pip
+  - pip:
+      - cellphonedb
+      - ktplotspy

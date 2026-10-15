@@ -1,0 +1,17 @@
+# scVelo RNA velocity + CellRank（VelocityKernel）
+# 对应课程：scvelo1（ps18），课程固定 scanpy==1.10.2
+# loom 文件需先用 velocyto 生成（见 templates/13_velocity_scvelo.py 顶部说明）
+name: sc-velo
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - scanpy=1.10.2
+  - numpy<2            # 预防性固定：scvelo 旧代码和 numpy 2 不兼容时报错
+  - leidenalg
+  - ipykernel
+  - notebook
+  - pip
+  - pip:
+      - scvelo
+      - cellrank

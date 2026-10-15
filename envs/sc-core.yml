@@ -1,0 +1,31 @@
+# 主环境：读取、QC、聚类、整合(Harmony/BBKNN)、CellTypist、PHATE、inferCNVpy、MAGIC、drug2cell、hotspot、scDRS、scAge
+# 对应课程：spyder456（ps2 5 6 7 9 17 20 21 22 24 25 26）
+# 创建：conda env create -f sc-core.yml
+name: sc-core
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10.14
+  - scanpy=1.10.2
+  - leidenalg
+  - python-igraph
+  - scikit-misc          # HVG flavor="seurat_v3" 需要
+  - scikit-image         # sc.pp.scrublet 自动定阈值需要
+
+  - pytables             # scAge 读 .h5
+  - spyder-kernels=2.5
+  - ipykernel
+  - pip
+  - pip:
+      - harmonypy==0.0.10  # 新版（>=0.1）输出方向变了，scanpy 1.10.2 的 harmony_integrate 会报 shape 错误
+      - bbknn==1.6.0     # 课程 ps7：新版报错时降到 1.6.0
+      - celltypist
+      - phate
+      - scprep
+      - magic-impute
+      - infercnvpy
+      - drug2cell
+      - blitzgsea
+      - hotspotsc
+      - mplscience
+      - scdrs

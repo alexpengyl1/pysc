@@ -1,0 +1,16 @@
+# GSEApy 通路富集；Enrichr / 在线基因集需要联网
+# 对应课程：gseapy_env（ps12）。课程代码 import 了 scanpy，所以这里也装上
+name: gseapy
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10.14
+  - scanpy=1.10.2
+  - lxml
+  - networkx
+  - spyder-kernels=2.5
+  - spyder-notebook
+  - ipykernel
+  - pip
+  - pip:
+      - gseapy

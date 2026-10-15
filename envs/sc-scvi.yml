@@ -1,0 +1,15 @@
+# scVI / scANVI 整合 + scib 评估（依赖 PyTorch，和主环境分开）
+# 对应课程：ps10
+name: sc-scvi
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10.14
+  - scanpy=1.10.2
+  - leidenalg
+  - spyder-kernels=2.5
+  - ipykernel
+  - pip
+  - pip:
+      - scvi-tools
+      - scib-metrics

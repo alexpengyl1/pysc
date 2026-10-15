@@ -1,0 +1,18 @@
+# muon 多组学（RNA+ATAC，MOFA/WNN）+ Scirpy（TCR/BCR）
+# 对应课程：ps23、ps28（课程装在 spyder456）
+name: sc-multi
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10.14
+  - scanpy=1.10.2
+  - leidenalg
+  - ipykernel
+  - notebook
+  - pip
+  - pip:
+      - muon
+      - mudatasets
+      - pysam
+      - mofapy2
+      - scirpy

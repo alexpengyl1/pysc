@@ -1,0 +1,17 @@
+# pySCENIC 转录调控网络；课程用 Python 3.7（ps13）
+# Apple Silicon 上 conda 可能没有 osx-arm64 的 python 3.7：
+#   CONDA_SUBDIR=osx-64 conda env create -f pyscenic.yml
+#   或用官方 Docker 镜像 aertslab/pyscenic
+name: pyscenic
+channels:
+  - conda-forge
+dependencies:
+  - python=3.7
+  - numpy
+  - cytoolz
+  - seaborn
+  - spyder-kernels
+  - ipykernel
+  - pip
+  - pip:
+      - pyscenic

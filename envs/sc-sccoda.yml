@@ -1,0 +1,15 @@
+# scCODA 细胞组成分析（依赖 TensorFlow，和主环境分开）
+# 对应课程：ps11
+name: sc-sccoda
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10.14
+  - scanpy=1.10.2
+  - spyder-kernels=2.5
+  - ipykernel
+  - pip
+  - pip:
+      - sccoda
+      - tf-keras
+      - pertpy           # 课程一起装了；新版 scCODA 实现在 pertpy 里（pt.tl.Sccoda）

@@ -1,0 +1,14 @@
+# metacells（Tanay lab）元细胞
+# 对应课程：ps29（课程装在 spyder456，含编译依赖，单独放）
+name: sc-metacell
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10.14
+  - scanpy=1.10.2
+  - seaborn
+  - ipykernel
+  - notebook
+  - pip
+  - pip:
+      - metacells

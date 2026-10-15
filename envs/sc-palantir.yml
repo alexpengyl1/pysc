@@ -1,0 +1,16 @@
+# Palantir 拟时序/命运概率 + CellRank（PseudotimeKernel）
+# 对应课程：ps16、ps19（课程装在 spyder456；Palantir 依赖 mellon/jax，单独放更稳）
+# CellRank 的 GAMR 基因趋势需要本机 R + mgcv，并 pip install rpy2；不装就用 cr.models.GAM
+name: sc-palantir
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10.14
+  - scanpy=1.10.2
+  - leidenalg
+  - spyder-kernels=2.5
+  - ipykernel
+  - pip
+  - pip:
+      - palantir
+      - cellrank

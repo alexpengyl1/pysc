@@ -1,0 +1,14 @@
+# LIANA+ 细胞通讯（多方法整合排名）
+# 对应课程：liana（ps15）
+name: liana
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10.14
+  - spyder-kernels=2.5
+  - spyder-notebook
+  - ipykernel
+  - pip
+  - pip:
+      - liana[common]
+      - adjustText==0.8  # 课程 ps15 固定的版本

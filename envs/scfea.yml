@@ -1,0 +1,19 @@
+# scFEA 代谢通量（命令行脚本，需先下载 github.com/changwn/scFEA 源码）
+# 对应课程：scFEA（ps27）；课程另外执行了 conda install --file requirements
+name: scFEA
+channels:
+  - pytorch
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pytorch
+  - torchvision
+  - numpy
+  - pandas=1.5.3       # 课程 ps27：新版 pandas 报错时降到 1.5.3
+  - scikit-learn
+  - matplotlib
+  - seaborn
+  - tqdm
+  - pip
+  - pip:
+      - magic-impute

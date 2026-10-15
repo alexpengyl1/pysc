@@ -1,0 +1,15 @@
+# macOS / Python / Jupyter
+.DS_Store
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# 分析结果和数据不上传 / analysis outputs and data
+results/
+data/
+
+# 测试运行产生的文件 / files created by test runs
+tests/test_project/
+tests/test_report.md
+tests/test_report.json
+tests/test_console.log
