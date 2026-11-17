@@ -20,11 +20,11 @@ description: Python/scanpy single-cell RNA-seq analysis (QC, integration, annota
    并让用户在该环境里运行 `python templates/00_check_env.py <环境名>`，确认没有 MISSING。
    用户的环境和这里不一样时，以用户导出的 `conda env export --no-builds` 为准。
 3. **检查输入数据状态**：对照「数据约定」，确认上游文件存在、需要的是原始 counts 还是 log1p。
-4. **复制模板和 `templates/fair_utils.py`** 到项目文件夹（两者放在一起，从项目根目录运行），
+4. **复制模板、`templates/fair_utils.py` 和 `templates/style_utils.py`** 到项目文件夹（三者放在一起，从项目根目录运行），
    只改顶部参数块（路径、物种、阈值、细胞类型名），说明选了哪些参数和原因。
    模板有两种格式，内容完全相同：`notebooks/*.ipynb`（Jupyter，用户默认用这个）和 `templates/*.py`（Spyder，`# %%` 分块）。
    notebook 已预设 kernel 名 = 环境名，打开后确认右上角 kernel 是对应环境。
-5. 新增图或表时，按「输出规范」命名并保存，不要用 plt.show() 了事或把文件写到别处。
+5. 新增图或表时，按「输出规范」命名并保存，按「作图风格」定配色和色标，不要用 plt.show() 了事或把文件写到别处。
 6. 结果解读看模板文件开头的 `[How to read the results]` 段落；运行后每个步骤文件夹里的 README.md 列出了参数和全部输出。
 
 ## 输出规范（FAIR）/ Output convention
@@ -56,6 +56,85 @@ description: Python/scanpy single-cell RNA-seq analysis (QC, integration, annota
 - notebook 和脚本写法相同：在 Jupyter 里 `fair.save_fig` 会先存文件，再把图显示在 cell 下面。
 - **参数全部写在脚本顶部、用大写变量名**，这样会被自动记录进 run_info.json 和 README.md。
 - **格式**：表用 CSV，单细胞对象用 h5ad / h5mu（开放格式，R 和 Python 都能读），随机步骤固定 SEED。
+
+## 作图风格 / Figure style
+
+`fair_utils` 决定图**存到哪里**，`style_utils` 决定图**长什么样**。两个文件一起复制到项目文件夹。
+
+新建图时不要直接用 scanpy 默认配色和默认色标，按下面三条来。模板里已有的
+`sc.pl.umap` / `sc.pl.dotplot` 调用保持不变，只在需要自定义图（跨细胞类型 × 分组的表达矩阵、
+基因家族热图）时用 `style_utils`。
+
+### 三条固定规则
+
+1. **配色绑定**：一类细胞在整个项目的所有图里（UMAP 的点、热图顶部色带、气泡图分组）用同一个颜色。
+   用 `resolve_palette(细胞类型列表)` 取色，不要每张图各自指定。
+   换数据集时，同名和同义词（`Macrophage`→`Myeloid`、`Fibroblasts`→`Fibroblast`）自动继承原色，
+   全新类型从预留色盘取不冲突的新色，这样不同数据集的图放在一起仍然可比。
+
+2. **色标**：z-score 后的表达量一律用蓝-白-红发散色（`DIVERGING`），**固定 `vmin=-2, vmax=2`**，
+   白色中心对应 z = 0。不要用数据min/max做色标范围——那样每张图的颜色含义都不一样，没法横向比较。
+
+3. **存图前必须跑重叠检测**：用 `save_checked()` 代替 `fair.save_fig()`，
+   有文字遮挡时直接报错、不写文件。密集热图用默认的 `scope="axes"`（只比同一个 Axes 内的刻度标签）；
+   跨 Axes 比较会报大量假阳性。
+
+### 用法
+
+```python
+import fair_utils as fair
+import style_utils as style
+
+dirs = fair.setup_step("05_annotate")
+
+CELL_TYPES = ["Enterocyte", "Stem", "T", "B", "Myeloid", "Fibroblast"]   # 本数据集的细胞类型，按想要的顺序
+TIME_POINTS = ["T0", "T1", "T3", "T7", "T14"]                            # 没有分组维度时设 None
+GENES = ["Tnf", "Tnfaip3", "Tnfrsf1a", "Tnfrsf1b"]
+MIN_CELLS = 10
+
+# 配色：整个项目共用，建图前取一次
+palette = style.resolve_palette(CELL_TYPES)
+
+# scanpy 的图也用同一套配色
+sc.pl.umap(adata, color="cell_type", palette=[palette[c] for c in CELL_TYPES], show=False)
+style.save_checked(dirs, "umap_cell_type", plt.gcf(), fair)
+
+# 细胞类型 × 时间点的表达矩阵热图
+matrix, dropped = style.group_matrix(adata, GENES, group_key="cell_type",
+                                     sub_key="time_point", layer="raw", min_cells=MIN_CELLS)
+print("细胞数不足被剔除的组合:", dropped)        # 剔除的组合不参与任何统计，不要再补回来
+
+fig = style.heatmap(style.zscore(matrix), group_order=CELL_TYPES, sub_order=TIME_POINTS,
+                    palette=palette, title="TNF family expression")
+style.save_checked(dirs, "tnf_family_heatmap", fig, fair)
+```
+
+基因按家族分组时传 `gene_families`，左侧会按组画背景色带：
+
+```python
+FAMILIES = {
+    "TNF": ["Tnf"],
+    "TNFAIP (effectors)": ["Tnfaip1", "Tnfaip3", "Tnfaip8"],
+    "TNFRSF (receptors)": ["Tnfrsf1a", "Tnfrsf1b", "Tnfrsf12a"],
+}
+fig = style.heatmap(style.zscore(matrix), group_order=CELL_TYPES, sub_order=TIME_POINTS,
+                    palette=palette, gene_families=FAMILIES)
+```
+
+### 数据侧的约定
+
+- **细胞数 < `MIN_CELLS`（默认 10）的组合直接剔除**，不参与均值计算。
+  `group_matrix` 返回的 `dropped` 列出被剔除的组合和细胞数，写进图注或 README。
+  细胞数太少的组合算出来的均值不稳定，画进热图会被误读成真实的生物学差异。
+- **z-score 跨列（跨细胞类型 × 分组）算，之后 clip 到 ±2**，由 `zscore()` 负责。
+- 跨物种基因名匹配（人类 symbol → 小鼠 symbol）只靠大小写转换是近似做法，
+  对不上的基因要如实列出来，不要猜测同源基因名。
+
+### 跨数据集复用
+
+`CELL_TYPES`、`TIME_POINTS`、`GENES` 全部是顶部参数，换数据集只改这三个。
+`style_utils` 本身不含任何数据集特定的内容——`DEFAULT_BINDING` 只是默认偏好，
+项目有自己的配色时传 `resolve_palette(types, preferred=你的配色字典)` 覆盖。
 
 ## 步骤总表 / Step → template → environment
 
@@ -297,7 +376,7 @@ pysc/
 │                  #   sc-palantir, sc-velo, sc-multi, sc-metacell, scfea）
 ├── notebooks/     # 01–25 步骤模板的 Jupyter 版（.ipynb，kernel 预设为对应环境）
 ├── tests/         # make_test_data.py（PBMC 3k 测试数据）+ run_all_tests.py（按各自 kernel 跑全部 notebook，出 test_report.md）
-└── templates/     # fair_utils.py（输出辅助）+ 00_check_env.py + 01–25 步骤模板（.py，Spyder 用）
+└── templates/     # fair_utils.py（输出辅助）+ style_utils.py（作图风格）+ 00_check_env.py + 01–25 步骤模板（.py，Spyder 用）
 ```
 .py 和 .ipynb 内容一致：notebook 由 .py 按 `# %%` 分块转换而来，文件开头说明变成 markdown，每个步骤前加小标题。
 改了 .py 想同步到 notebook 时，可用 `jupytext --to ipynb 文件.py`（开头说明会留在代码注释里），或直接改 notebook。
